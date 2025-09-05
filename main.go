@@ -92,12 +92,11 @@ func anonymizeMap(ci map[string]any) map[string]any {
 
 		vs, ok := v.(string)
 		if ok && awsarn.IsARN(vs) {
-			arn, err := awsarn.Parse(vs)
-			if err == nil {
-				redacted[k] = fmt.Sprintf("arn:%s:%s:000000000000:%s", arn.Partition, arn.Service, arn.Resource)
-				continue
-			}
-			redacted[k] = "arn:aws:REDACTED"
+			v = anonymizeArn(vs)
+		}
+
+		if strings.Contains(lowerK, "name") {
+			redacted[k] = "REDACTED_NAME"
 			continue
 		}
 
@@ -109,6 +108,14 @@ func anonymizeMap(ci map[string]any) map[string]any {
 		case "resourcename":
 			redacted[k] = "REDACTED_RESOURCE_NAME"
 		case "arn":
+			vs, ok := v.(string)
+			if ok && strings.Contains(vs, "REDACTED") {
+				redacted[k] = vs
+			} else if ok {
+				redacted[k] = anonymizeArn(vs)
+			} else {
+				redacted[k] = "arn:aws:REDACTED"
+			}
 			redacted[k] = "arn:aws:REDACTED"
 		case "tags":
 			redacted[k] = map[string]string{"REDACTED": "REDACTED"}
